@@ -13,7 +13,7 @@ class ParserCreator:
 from tools.output import Output
 from tools.loging import log_error
 
-def parse(output):
+def parse(output = Output()):
     # Настройки парсера
     input_file = ''
     table_name = ''
@@ -27,12 +27,12 @@ def parse(output):
 
     def _web_template(self):
         return """from tools.output import Output
-from tools.loging import log_error
 import requests
 from bs4 import BeautifulSoup
 from time import sleep
+from tools.loging import log_error
 
-def parse(output):
+def parse(output = Output()):
     # Настройки парсера
     base_url = ''
     headers = {{

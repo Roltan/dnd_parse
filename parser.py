@@ -4,6 +4,8 @@ from tools.config import config
 from tools.creator import ParserCreator
 from tools.output import Output
 from tools.run import RunParser
+from tools.loging import log_error
+import traceback
 
 def setup_argparse():
     """Настройка аргументов командной строки"""
@@ -55,6 +57,13 @@ def handle_run(args):
         print(f"❌ Ошибка при запуске: {e}", file=sys.stderr)
         sys.exit(1)
 
+def handle_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+    log_error(f"Uncaught exception:\n    {exc_type.__name__};\n    {exc_value};\n{''.join(traceback.format_tb(exc_traceback))}\n")
+
+sys.excepthook = handle_exception
 if __name__ == "__main__":
     parser = setup_argparse()
     args = parser.parse_args()

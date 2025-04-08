@@ -1,85 +1,61 @@
-from tools.output import Output
-from tools.run import RunParser
-from tools.loging import log_error, log_debug
-import os
 import argparse
 import sys
-import traceback
-
-# папка с парсерами
-table_directory = "table"
-# подключение к целевой бд
-DB = Output(host='MySQL-8.2', user='root', password='', database='dnd_hero')
-runParser = RunParser(DB)
-# Список файлов, которые нужно запустить (если пустой, запустятся все)
-files_to_run = [
-    "vin/wmi.py",
-]
-
-# Перехват исключений
-def handle_exception(exc_type, exc_value, exc_traceback):
-    if issubclass(exc_type, KeyboardInterrupt):
-        sys.__excepthook__(exc_type, exc_value, exc_traceback)
-        return
-    log_error(f"Uncaught exception:\n    {exc_type.__name__};\n    {exc_value};\n{''.join(traceback.format_tb(exc_traceback))}\n")
-
-def create_parser_file(parser_path):
-    # Путь к папке с базой данных
-    full_path = os.path.join(table_directory, parser_path)
-    dir_path = os.path.dirname(full_path)
-    
-    # Создаем папку, если она не существует
-    if not os.path.exists(dir_path):
-        os.makedirs(dir_path)
-    
-    # Путь к файлу парсера
-    file_path = full_path + '.py'
-    
-    # Создаем файл и записываем в него шаблон парсера
-    with open(file_path, 'w', encoding='utf-8') as f:
-        f.write(f"""from tools.read import ReadSQL
+from tools.config import config
+from tools.creator import ParserCreator
 from tools.output import Output
-from tools.loging import log_error
-from collections import OrderedDict
-import json
+from tools.run import RunParser
 
-def parse(output = Output(host='MySQL-8.2', user='root', password='', database='example')):
-    # название входного файла
-    input_file = ''
-    # название искомой таблицы
-    table_name = ''
-    # название создаваемого атрибута
-    atrName = ''
-                
-    # переменные с данными таблиц
-    table = ReadSQL(input_file, table_name)
-                
-    ##""")
-    
-    print(f"Created parser file: {file_path}")
+def setup_argparse():
+    """Настройка аргументов командной строки"""
+    parser = argparse.ArgumentParser(description="Парсер SQL и веб-данных")
+    subparsers = parser.add_subparsers(dest='command', required=True)
 
-sys.excepthook = handle_exception
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Manage parser files.")
-    subparsers = parser.add_subparsers(dest='command')
+    # Парсер для create
+    create = subparsers.add_parser('create', help='Создать новый парсер')
+    create.add_argument('name', help='Имя парсера (без .py)')
+    for ptype, desc in config.PARSER_TYPES.items():
+        create.add_argument(
+            f'--{ptype}',
+            action='store_const',
+            const=ptype,
+            dest='parser_type',
+            help=f'Создать {desc.lower()}'
+        )
+    create.set_defaults(func=handle_create)
 
-    # Подкоманда для создания нового файла парсера
-    create_parser = subparsers.add_parser('create', help='Create a new parser file')
-    create_parser.add_argument('parser', type=str, help='Parser name or path')
+    # Парсер для run
+    run = subparsers.add_parser('run', help='Запустить парсеры')
+    run.add_argument('--all', action='store_true', help='Запустить все парсеры')
+    run.add_argument('--file', help='Запустить конкретный файл')
+    run.set_defaults(func=handle_run)
 
-    # Подкоманда для запуска парсеров
-    run_parser = subparsers.add_parser('run', help='Run parsers')
-    run_parser.add_argument('--all', action='store_true', help='Run all parsers')
-    run_parser.add_argument('--dir', type=str, help='Directory to run parsers from')
+    return parser
 
-    args = parser.parse_args()
+def handle_create(args):
+    """Обработка команды create"""
+    creator = ParserCreator()
+    try:
+        created_file = creator.create(args.name, args.parser_type)
+        print(f"✅ Создан парсер: {created_file}")
+    except Exception as e:
+        print(f"❌ Ошибка: {e}", file=sys.stderr)
+        sys.exit(1)
 
-    if args.command == 'create':
-        create_parser_file(args.parser)
-    elif args.command == 'run':
+def handle_run(args):
+    """Обработка команды run"""
+    runner = RunParser(Output(**config.db_config))
+    try:
         if args.all:
-            runParser.run_all_parsers(table_directory)
-        elif args.dir:
-            runParser.run_parsers_by_folder(table_directory, args.dir)
+            runner.run_all_parsers(config.table_directory)
+        elif args.file:
+            runner.run_specific_parsers(config.table_directory, [args.file])
         else:
-            runParser.run_specific_parsers(table_directory, files_to_run)
+            runner.run_specific_parsers(config.table_directory, config.files_to_run)
+    except Exception as e:
+        print(f"❌ Ошибка при запуске: {e}", file=sys.stderr)
+        sys.exit(1)
+
+if __name__ == "__main__":
+    parser = setup_argparse()
+    args = parser.parse_args()
+    args.func(args)

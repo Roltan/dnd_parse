@@ -5,6 +5,75 @@ from bs4 import BeautifulSoup
 from dir import ability, subAbility, num_words, replaceProficiencies, filterSkill
 from db import get_items_from_db, get_proficiencies_id
 
+def parse_units(soup):
+    rows = soup.select('table.class_table tbody tr')
+    
+    # Извлечение заголовков из первой строки
+    header_row1 = []
+    colspan_counts = []  # Хранит количество колонок для каждой ячейки первой строки
+    for cell in rows[0].find_all('td'):
+        # Ищем span с классом long и берем его текст
+        long_span = cell.find('span', class_='long')
+        if long_span:
+            # Заменяем все формы <br> на пробел и удаляем лишние символы
+            text = long_span.decode_contents()
+            text = re.sub(r'<br\s*/?>', ' ', text)  # Удаляем <br>, <br/>, <br />
+            text = " ".join(text.split())  # Убираем лишние пробелы
+        else:
+            # Если нет span.long, берем текст всей ячейки
+            text = cell.decode_contents()
+            text = re.sub(r'<br\s*/?>', ' ', text)  # Удаляем <br>, <br/>, <br />
+            text = " ".join(text.split())  # Убираем лишние пробелы
+        
+        # Учитываем colspan
+        colspan = int(cell.get('colspan', 1))
+        header_row1.extend([text] * colspan)
+        colspan_counts.append(colspan)
+    
+    # Извлечение подзаголовков из второй строки
+    header_row2 = [cell.get_text(strip=True) for cell in rows[1].find_all('td')]
+    
+    # Формирование полных имен столбцов
+    column_names = []
+    subheader_index = 0  # Индекс для подзаголовков
+    for i, colspan in enumerate(colspan_counts):
+        if colspan == 1:  # Колонка без подзаголовков
+            column_names.append(header_row1[i])
+        else:  # Колонка с подзаголовками
+            for j in range(colspan):
+                main_header = header_row1[i + j]
+                subheader = header_row2[subheader_index]
+                column_names.append(f"{main_header}_{subheader}")
+                subheader_index += 1
+    
+    # Исключение ненужных столбцов
+    columns_to_skip = {"Уровень", "Бонус мастерства", "Умения"}
+    column_indices = [
+        i for i, name in enumerate(column_names)
+        if name.split("_")[0].strip() not in columns_to_skip
+    ]
+    
+    # Обработка данных из таблицы
+    result = []
+    for row in rows[2:]:  # Пропускаем первые две строки (шапку)
+        cells = row.find_all('td')
+        level = cells[0].get_text(strip=True)  # Значение из колонки "Уровень"
+        
+        for index in column_indices:
+            value = cells[index].get_text(strip=True)
+            if value == "-":  # Пропускаем ячейки со значением "-"
+                continue
+            
+            # Формируем объект
+            obj = {
+                'name': column_names[index],
+                'lvl': level,
+                'value': value
+            }
+            result.append(obj)
+    
+    return result
+
 def filter_abilities(abilities):
     # Преобразуем forbidden_titles в множество для быстрого поиска
     forbidden_set = set(filterSkill)

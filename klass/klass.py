@@ -3,7 +3,7 @@ import re
 import requests
 from bs4 import BeautifulSoup
 from dir import ability, abilities_spell_dir, arrURL, subKlassLvl
-from klassUtil import parse_equipment, process_skill_line, parse_proficiencies, parse_skill, filter_abilities
+from klassUtil import parse_equipment, process_skill_line, parse_proficiencies, parse_skill, filter_abilities, parse_units
 
 def parse_klass(URL):
     # Загрузка страницы
@@ -32,6 +32,7 @@ def parse_klass(URL):
     skills = parse_skill(soup)
     skills = filter_abilities(skills)
     abilities_spell = abilities_spell_dir.get(name.lower(), None)
+    units = parse_units(soup)
 
     print({
         # 'name': name,
@@ -47,6 +48,7 @@ def parse_klass(URL):
         # 'sub_klass_lvl': sub_klass_lvl,
         # 'skills': skills
         # 'abilities_spell': abilities_spell
+        'units': units
     })
     return
 

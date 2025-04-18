@@ -3,7 +3,7 @@ import re
 import requests
 from bs4 import BeautifulSoup
 from dir import ability, subAbility, arrURL, num_words
-from klassUtil import parse_equipment, process_skill_line
+from klassUtil import parse_equipment, process_skill_line, parse_proficiencies
 
 def parse_klass(URL):
     # Загрузка страницы
@@ -25,6 +25,9 @@ def parse_klass(URL):
     save_stat = [ability[name] for name in save_stat]
     abilities_count, klass_abilities = process_skill_line(additionalInfo[7].text)
     equipments = parse_equipment(soup.select_one('div.additionalInfo span ul'))
+    money = re.search(r'\dк\d+(×|\+)\d+', additionalInfo[9].text.strip())
+    money = money.group()
+    proficiencies = parse_proficiencies([additionalInfo[3], additionalInfo[4], additionalInfo[5]])
 
     print({
         # 'name': name,
@@ -34,7 +37,8 @@ def parse_klass(URL):
         # 'save_stat': save_stat,
         # 'abilities_count': abilities_count,
         # 'klass_abilities': klass_abilities,
-        'equipments': equipments
+        # 'equipments': equipments,
+        # 'money': money
     })
     return
 

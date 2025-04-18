@@ -21,7 +21,27 @@ def get_items_from_db(category_name):
         """
         cursor.execute(query, (category_name,))
         items = [row[0] for row in cursor.fetchall()]
-        print(f"Результат из БД для '{category_name}': {items}")
+        return items
+    except mysql.connector.Error as err:
+        print(f"Database error: {err}")
+        return []
+    finally:
+        if conn.is_connected():
+            cursor.close()
+            conn.close()
+
+# Функция получения id владения
+def get_proficiencies_id(name):
+    try:
+        conn = dnd_hero()
+        cursor = conn.cursor()
+        query = """
+            SELECT id 
+            FROM proficiencies
+            WHERE name = %s
+        """
+        cursor.execute(query, (name,))
+        items = [row[0] for row in cursor.fetchall()]
         return items
     except mysql.connector.Error as err:
         print(f"Database error: {err}")

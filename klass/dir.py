@@ -52,3 +52,6 @@ arrURL = [
     'https://dnd.su/class/97-ranger/',
     'https://dnd.su/class/101-sorcerer/'
 ]
+replaceProficiencies = {
+    "Музыкальных инструмента": "Музыкальные инструменты",
+}

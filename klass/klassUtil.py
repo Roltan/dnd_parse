@@ -2,8 +2,52 @@ import os
 import re
 import requests
 from bs4 import BeautifulSoup
-from dir import ability, subAbility, arrURL, num_words
-from db import get_items_from_db
+from dir import ability, subAbility, num_words, replaceProficiencies
+from db import get_items_from_db, get_proficiencies_id
+
+def parse_proficiencies(arSoup):
+    response = []
+    for soup in arSoup:
+        text = soup.get_text(separator=' ', strip=True)
+        if ":" in text:
+            text = text.split(":", 1)[1].strip()
+        else:
+            text = text.strip()
+
+        arr = [el.strip() for el in text.split(",")]
+        for el in arr:
+            el = el.strip()
+            
+            try:
+                # Если элемент содержит "на ваш выбор", извлекаем категорию из ссылки
+                if "на ваш выбор" in el.lower():
+                    link = soup.find('a', href=True)
+                    if link:
+                        category = link.get_text(strip=True).capitalize()
+                        
+                        # Применяем замены из словаря replacements
+                        category = replaceProficiencies.get(category, category)
+                        
+                        prof_id = get_proficiencies_id(category)
+                        if prof_id:  # Проверяем, что результат не пустой
+                            response.append(prof_id[0])
+                        else:
+                            print(f"Предупреждение: Не удалось найти ID для категории '{category}' в БД.")
+                else:
+                    # Обычный случай: преобразуем название в ID
+                    
+                    # Применяем замены из словаря replacements
+                    el = replaceProficiencies.get(el.capitalize(), el.capitalize())
+                    
+                    prof_id = get_proficiencies_id(el)
+                    if prof_id:  # Проверяем, что результат не пустой
+                        response.append(prof_id[0])
+                    else:
+                        print(f"Предупреждение: Не удалось найти ID для предмета '{el}' в БД.")
+            except Exception as e:
+                print(f"Ошибка при обработке элемента '{el}': {e}")
+
+    return response
 
 def parse_equipment(soup):
     result = []

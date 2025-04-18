@@ -2,8 +2,20 @@ import os
 import re
 import requests
 from bs4 import BeautifulSoup
-from dir import ability, subAbility, num_words, replaceProficiencies
+from dir import ability, subAbility, num_words, replaceProficiencies, filterSkill
 from db import get_items_from_db, get_proficiencies_id
+
+def filter_abilities(abilities):
+    # Преобразуем forbidden_titles в множество для быстрого поиска
+    forbidden_set = set(filterSkill)
+    
+    # Фильтруем массив abilities
+    filtered_abilities = [
+        ability for ability in abilities
+        if ability["name"] not in forbidden_set
+    ]
+    
+    return filtered_abilities
 
 def parse_skill(soup):
     abilities = []

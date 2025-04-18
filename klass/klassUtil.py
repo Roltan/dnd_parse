@@ -5,6 +5,60 @@ from bs4 import BeautifulSoup
 from dir import ability, subAbility, num_words, replaceProficiencies
 from db import get_items_from_db, get_proficiencies_id
 
+def parse_skill(soup):
+    abilities = []
+    current_ability = None
+
+    # Проходим по всем элементам страницы
+    for element in soup.find_all(True):  # True означает "любой тег"
+        if element.name == 'h3' and 'underlined' in element.get('class', []):
+            # Если это новый заголовок <h3 class="underlined">, завершаем предыдущую способность
+            if current_ability:
+                abilities.append(current_ability)
+            
+            # Начинаем новую способность
+            name = element.get_text(strip=True)
+            lvl = None
+            description = ''
+
+            # Ищем уровень в следующем элементе (обычно <em> или <p>)
+            next_element = element.find_next_sibling()
+            if next_element and next_element.name == 'p':
+                em_tag = next_element.find('em')
+                if em_tag:
+                    lvl_text = em_tag.get_text(strip=True)
+                    match = re.search(r'(\d+)-й\s+уровень', lvl_text)
+                    if match:
+                        lvl = int(match.group(1))
+            
+            # Если уровень не найден, игнорируем эту способность
+            if lvl is None:
+                current_ability = None
+                continue
+
+            current_ability = {
+                "name": name,
+                "lvl": lvl,
+                "description": description
+            }
+        elif current_ability and element.name != 'br':
+            # Добавляем элементы к описанию текущей способности, пока не встретится <br>
+            if element.name in ['p', 'table', 'ul', 'ol']:
+                description += str(element)
+
+        elif current_ability and element.name == 'br':
+            # Завершаем текущую способность при встрече <br>
+            current_ability["description"] = description
+            abilities.append(current_ability)
+            current_ability = None
+
+    # Добавляем последнюю способность, если она не завершена
+    if current_ability:
+        current_ability["description"] = description
+        abilities.append(current_ability)
+
+    return abilities
+
 def parse_proficiencies(arSoup):
     response = []
     for soup in arSoup:

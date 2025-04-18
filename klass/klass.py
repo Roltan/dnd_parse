@@ -2,8 +2,8 @@ import os
 import re
 import requests
 from bs4 import BeautifulSoup
-from dir import ability, subAbility, arrURL, num_words
-from klassUtil import parse_equipment, process_skill_line, parse_proficiencies
+from dir import ability, subAbility, arrURL, subKlassLvl
+from klassUtil import parse_equipment, process_skill_line, parse_proficiencies, parse_skill
 
 def parse_klass(URL):
     # Загрузка страницы
@@ -27,7 +27,10 @@ def parse_klass(URL):
     equipments = parse_equipment(soup.select_one('div.additionalInfo span ul'))
     money = re.search(r'\dк\d+(×|\+)\d+', additionalInfo[9].text.strip())
     money = money.group()
-    proficiencies = parse_proficiencies([additionalInfo[3], additionalInfo[4], additionalInfo[5]])
+    proficiencies = parse_proficiencies([additionalInfo[3], additionalInfo[4], additionalInfo[5]]),
+    sub_klass_lvl = subKlassLvl.get(name)
+    skills = parse_skill(soup)
+    print(skills)
 
     print({
         # 'name': name,
@@ -38,7 +41,9 @@ def parse_klass(URL):
         # 'abilities_count': abilities_count,
         # 'klass_abilities': klass_abilities,
         # 'equipments': equipments,
-        # 'money': money
+        # 'money': money,
+        # 'proficiencies': proficiencies,
+        # 'sub_klass_lvl': sub_klass_lvl
     })
     return
 

@@ -5,6 +5,28 @@ from bs4 import BeautifulSoup
 from dir import ability, subAbility, num_words, replaceProficiencies, filterSkill
 from db import get_items_from_db, get_proficiencies_id
 
+def parse_sub_klass(soup):
+    sub_klass = []
+    elements = soup.select('h2.bigSectionTitle.hide-next.hide-next-h2')
+
+    # Проходим по всем элементам страницы
+    for element in elements:
+        skills = None
+        next_element = element.find_next_sibling()
+        if next_element and next_element.name == 'div' and 'hide-wrapper' in next_element.get('class', []):
+            skills = parse_skill(next_element, 'smallSectionTitle')
+
+        if skills == None:
+            continue
+
+        # Начинаем новый класс
+        sub_klass.append({
+            'name': element.get_text(strip=True).capitalize(),
+            'skills': skills
+        })
+
+    return sub_klass
+
 def parse_units(soup):
     rows = soup.select('table.class_table tbody tr')
     
@@ -86,19 +108,19 @@ def filter_abilities(abilities):
     
     return filtered_abilities
 
-def parse_skill(soup):
+def parse_skill(soup, class_header = 'underlined'):
     abilities = []
     current_ability = None
 
     # Проходим по всем элементам страницы
     for element in soup.find_all(True):  # True означает "любой тег"
-        if element.name == 'h3' and 'underlined' in element.get('class', []):
+        if element.name == 'h3' and class_header in element.get('class', []):
             # Если это новый заголовок <h3 class="underlined">, завершаем предыдущую способность
             if current_ability:
                 abilities.append(current_ability)
             
             # Начинаем новую способность
-            name = element.get_text(strip=True)
+            name = element.get_text(strip=True).capitalize()
             lvl = None
             description = ''
 
@@ -124,7 +146,7 @@ def parse_skill(soup):
             }
         elif current_ability and element.name != 'br':
             # Добавляем элементы к описанию текущей способности, пока не встретится <br>
-            if element.name in ['p', 'table', 'ul', 'ol']:
+            if element.name in ['p', 'table', 'ul', 'ol'] and not element.find('em'):
                 description += str(element)
 
         elif current_ability and element.name == 'br':

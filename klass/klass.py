@@ -4,9 +4,9 @@ import requests
 from bs4 import BeautifulSoup
 from dir import ability, abilities_spell_dir, arrURL, subKlassLvl
 from klassUtil import parse_equipment, process_skill_line, parse_proficiencies, parse_skill, filter_abilities, parse_units, parse_sub_klass
+from db import create_klass
 
 def parse_klass(URL):
-    # Загрузка страницы
     response = requests.get(URL)
     if response.status_code != 200:
         print("Ошибка при загрузке страницы")
@@ -14,7 +14,7 @@ def parse_klass(URL):
     
     
     soup = BeautifulSoup(response.content, 'html.parser')
-    name = soup.find('h1', class_='header-page_title').text.strip()
+    name = soup.select_one('h1.header-page_title a').text.strip()
     source = soup.find('ul', class_='params card__article-body').find('span').text.strip()
     additionalInfo = soup.select('div.additionalInfo span p')
 
@@ -35,24 +35,25 @@ def parse_klass(URL):
     units = parse_units(soup)
     sub_klass = parse_sub_klass(soup)
 
-    # print({
-        # 'name': name,
-        # 'manual': URL,
-        # 'source': source,
-        # 'dice_hp': dice_hp,
-        # 'save_stat': save_stat,
-        # 'abilities_count': abilities_count,
-        # 'klass_abilities': klass_abilities,
-        # 'equipments': equipments,
-        # 'money': money,
-        # 'proficiencies': proficiencies,
-        # 'sub_klass_lvl': sub_klass_lvl,
-        # 'skills': skills
-        # 'abilities_spell': abilities_spell
-        # 'units': units
-    # })
-    return
+    return {
+        'name': name,
+        'manual': URL,
+        'source': source,
+        'dice_hp': dice_hp,
+        'save_stat': save_stat,
+        'abilities_count': abilities_count,
+        'equipments': equipments,
+        'money': money,
+        'sub_klass_lvl': sub_klass_lvl,
+        'abilities_spell': abilities_spell,
+        'klass_abilities': klass_abilities,
+        'proficiencies': proficiencies[0],
+        'skills': skills,
+        'units': units,
+        'sub_klass': sub_klass
+    }
 
-parse_klass(arrURL[0])
+klass = parse_klass(arrURL[0])
+create_klass(klass)
 # for url in arrURL:
 #     parse_klass(url)
